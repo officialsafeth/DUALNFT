@@ -1,0 +1,53 @@
+# Import the necessary libraries
+from hedera import Client, PrivateKey, AccountCreateTransaction, Hbar, TokenCreateTransaction, TokenMintTransaction
+from datetime import datetime
+from datetime import timedelta
+
+# Initialize the Hedera client
+client = Client.for_testnet()  # Replace with your network choice (mainnet/testnet)
+
+# Set up your operator account for transaction fees
+operator_private_key = PrivateKey.generate()
+operator_id = operator_private_key.public_key.to_account_id()
+
+# Create a new account (representing the NFT owner)
+new_account = PrivateKey.generate()
+new_account_id = new_account.public_key.to_account_id()
+
+# Create a token (representing the NFT)
+token_result = (
+    TokenCreateTransaction()
+    .set_token_name("MyNFT")
+    .set_token_symbol("NFT")
+    .set_decimals(0)  # Decimals are set to 0 for NFTs
+    .set_initial_supply(0)  # Initial supply is 0 for NFTs
+    .set_admin_key(operator_private_key.public_key)
+    .set_wipe_key(operator_private_key.public_key)
+    .set_kyc_key(operator_private_key.public_key)
+    .set_freeze_key(operator_private_key.public_key)
+    .set_supply_key(operator_private_key.public_key)
+    .set_default_freeze_status(True)  # Tokens are non-fungible, so they're frozen by default
+    .set_expiration_time(datetime.utcnow() + timedelta(days=365))  # Set token expiration (adjust as needed)
+    .set_auto_renew_period(timedelta(days=30))  # Set auto-renew period (adjust as needed)
+    .set_max_transaction_fee(Hbar(1))  # Set maximum transaction fee (adjust as needed)
+    .execute(client)
+)
+
+# Get the token ID
+token_id = token_result.get_receipt(client).token_id
+
+# Mint two NFTs
+for _ in range(2):
+    (
+        TokenMintTransaction()
+        .set_token_id(token_id)
+        .set_amount(1)  # Mint one NFT
+        .set_metadata_uri("https://your-metadata-url.com/nft/12345")  # Replace with your metadata URL
+        .set_to_account(new_account_id)
+        .execute(client)
+    )
+
+# Print the NFTs' metadata URLs and token ID
+print("NFT 1 Metadata URL:", "https://your-metadata-url.com/nft/12345")
+print("NFT 2 Metadata URL:", "https://your-metadata-url.com/nft/12345")
+print("Token ID:", token_id.to_string())
